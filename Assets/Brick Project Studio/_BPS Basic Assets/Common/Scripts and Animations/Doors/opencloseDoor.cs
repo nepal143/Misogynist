@@ -16,16 +16,27 @@ namespace SojaExiles
         public AudioClip closeSound;
 
         private AudioSource audioSource;
+        private NoiseSource noiseSource;
 
         void Awake()
         {
             navMeshObstacle = GetComponent<NavMeshObstacle>();
             audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.spatialBlend = 1f; // Make sound 3D
+            audioSource.spatialBlend = 1f;
             audioSource.rolloffMode = AudioRolloffMode.Linear;
             audioSource.minDistance = 1f;
             audioSource.maxDistance = 10f;
             audioSource.playOnAwake = false;
+
+            // Add or get NoiseSource
+            noiseSource = gameObject.GetComponent<NoiseSource>();
+            if (noiseSource == null)
+            {
+                noiseSource = gameObject.AddComponent<NoiseSource>();
+                noiseSource.noiseMakerTag = "Player";
+                noiseSource.noiseRadius = 10f;
+                noiseSource.noiseStrength = 0.7f;
+            }
         }
 
         void Start()
@@ -34,43 +45,22 @@ namespace SojaExiles
 
             GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
             if (playerObject != null)
-            {
                 Player = playerObject.transform;
-            }
-            else
-            {
-                Debug.LogWarning("Player object with tag 'Player' not found!");
-            }
-
-            if (navMeshObstacle == null)
-            {
-                navMeshObstacle = GetComponent<NavMeshObstacle>();
-            }
         }
 
         void OnMouseOver()
         {
-            if (Player)
+            if (Player && Vector3.Distance(Player.position, transform.position) < 2.3f)
             {
-                float dist = Vector3.Distance(Player.position, transform.position);
-                if (dist < 2.3f)
-                {
-                    if (!open && Input.GetMouseButtonDown(0))
-                    {
-                        StartCoroutine(opening());
-                    }
-                    else if (open && Input.GetMouseButtonDown(0))
-                    {
-                        StartCoroutine(closing());
-                    }
-                }
+                if (!open && Input.GetMouseButtonDown(0))
+                    StartCoroutine(opening());
+                else if (open && Input.GetMouseButtonDown(0))
+                    StartCoroutine(closing());
             }
         }
 
         public IEnumerator opening()
         {
-            Debug.Log("You are opening the door");
-
             if (navMeshObstacle != null && navMeshObstacle.enabled)
                 navMeshObstacle.enabled = false;
 
@@ -80,28 +70,25 @@ namespace SojaExiles
             openandclose.Play("Opening");
             open = true;
 
+            noiseSource.EmitNoise();
+
             yield return new WaitForSeconds(0.5f);
         }
 
         public IEnumerator closing()
         {
-            Debug.Log("You are closing the door");
-
             if (closeSound != null)
                 audioSource.PlayOneShot(closeSound);
 
             openandclose.Play("Closing");
             open = false;
 
+            noiseSource.EmitNoise();
+
             if (navMeshObstacle != null)
             {
                 yield return new WaitForSeconds(0.5f);
                 navMeshObstacle.enabled = true;
-                Debug.Log("NavMeshObstacle re-enabled");
-            }
-            else
-            {
-                yield return new WaitForSeconds(0.5f);
             }
         }
     }
