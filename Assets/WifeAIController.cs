@@ -119,16 +119,13 @@ public class WifeAIController : MonoBehaviour
 IEnumerator OpenDoorAndWait(MonoBehaviour doorScript)
 {
     isWaitingForDoor = true;
-    agent.isStopped = true;IEnumerator OpenDoorAndWait(MonoBehaviour doorScript)
-{
-    isWaitingForDoor = true;
     agent.isStopped = true;
 
     animator.SetBool("Walking", false);
     animator.SetBool("Idle", true);
     yield return new WaitForSeconds(1f);
 
-    // Call door's opening coroutine
+    // 🛠 Call door's opening coroutine
     var method = doorScript.GetType().GetMethod("opening");
     if (method != null)
     {
@@ -140,7 +137,7 @@ IEnumerator OpenDoorAndWait(MonoBehaviour doorScript)
         else
         {
             Debug.LogWarning("Door script's opening() did not return IEnumerator.");
-            yield return new WaitForSeconds(1f); // small wait just in case
+            yield return new WaitForSeconds(1f);
         }
     }
     else
@@ -149,51 +146,24 @@ IEnumerator OpenDoorAndWait(MonoBehaviour doorScript)
         yield return new WaitForSeconds(1f);
     }
 
-    // ✅ Door is open, continue walking
+    // ✅ Temporarily disable door's BoxCollider for 0.5 sec to let AI pass
+    Collider doorCollider = doorScript.GetComponent<Collider>();
+    if (doorCollider != null)
+    {
+        doorCollider.enabled = false;
+        yield return new WaitForSeconds(0.5f);
+        doorCollider.enabled = true;
+        Debug.Log("Temporarily disabled door collider.");
+    }
+
     animator.SetBool("Walking", true);
     animator.SetBool("Idle", false);
-
     agent.isStopped = false;
-    MoveToRandomPosition(); // Continue pathfinding
 
+    MoveToRandomPosition(); // Resume walking
     isWaitingForDoor = false;
 }
 
-
-    animator.SetBool("Walking", false);
-    animator.SetBool("Idle", true);
-    yield return new WaitForSeconds(1f);
-
-    // Call door's opening coroutine
-    var method = doorScript.GetType().GetMethod("opening");
-    if (method != null)
-    {
-        IEnumerator doorOpeningCoroutine = method.Invoke(doorScript, null) as IEnumerator;
-        if (doorOpeningCoroutine != null)
-        {
-            yield return StartCoroutine(doorOpeningCoroutine);
-        }
-        else
-        {
-            Debug.LogWarning("Door script's opening() did not return IEnumerator.");
-            yield return new WaitForSeconds(1f); // small wait just in case
-        }
-    }
-    else
-    {
-        Debug.LogWarning("Door script does not have an opening() coroutine method.");
-        yield return new WaitForSeconds(1f);
-    }
-
-    // ✅ Door is open, continue walking
-    animator.SetBool("Walking", true);
-    animator.SetBool("Idle", false);
-
-    agent.isStopped = false;
-    MoveToRandomPosition(); // Continue pathfinding
-
-    isWaitingForDoor = false;
-}
 
 void MoveToRandomPosition()
 {

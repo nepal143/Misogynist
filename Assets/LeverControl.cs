@@ -12,6 +12,7 @@ public class LeverControl : MonoBehaviour
     public float leverRotateTime = 1.0f;   // Time to rotate lever
     public float garageMoveTime = 2.0f;    // Time to open garage
 
+    private bool leverPulled = false ; 
     private bool isInteracting = false;
 
     void OnMouseDown()
@@ -33,6 +34,7 @@ public class LeverControl : MonoBehaviour
 
             yield return new WaitForSeconds(0.5f); // Optional delay
             yield return StartCoroutine(MoveGarageDoor(garageStart.position, garageEnd.position));
+            leverPulled =true; 
         }
         else
         {
@@ -74,4 +76,8 @@ public class LeverControl : MonoBehaviour
 
         garageDoor.position = to;
     }
+    public bool IsLeverPulled()
+{
+    return leverPulled; // assume this bool becomes true when lever is pulled
+}
 }

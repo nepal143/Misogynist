@@ -5,7 +5,7 @@ public class CarTireInstaller : MonoBehaviour
     public Transform playerHand;              // Player's hand holding the tire
     public GameObject preInstalledTire;       // The disabled tire object already placed in car
     public Transform objectToRotate;          // Optional object to rotate (e.g. wheel mount)
-
+    private int installedTireCount ; 
     void OnMouseDown()
     {
         if (playerHand.childCount > 0)
@@ -15,6 +15,7 @@ public class CarTireInstaller : MonoBehaviour
             if (heldItem.CompareTag("Tire"))
             {
                 InstallTire(heldItem.gameObject);
+                installedTireCount++ ; 
             }
         }
         else
@@ -43,4 +44,8 @@ public class CarTireInstaller : MonoBehaviour
 
         Debug.Log("Tire installed successfully. Hand tire removed, car tire enabled.");
     }
+    public bool AreAllTiresInstalled()
+{
+    return installedTireCount >= 1;
+}
 }
