@@ -1,9 +1,12 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class ObjectGrabber : MonoBehaviour
 {
-    public Transform handHold;
+    public Transform handHold;                     // For normal items
+    public Transform distantHoldPoint;             // For big items
     public float grabDistance = 1.3f;
+    public List<string> bigObjectTags;             // Tags to consider as big objects
 
     private GameObject heldObject = null;
     private Rigidbody heldRigidbody = null;
@@ -36,21 +39,24 @@ public class ObjectGrabber : MonoBehaviour
         heldRigidbody = obj.GetComponent<Rigidbody>();
         heldColliders = obj.GetComponentsInChildren<Collider>();
 
-        // Disable colliders
+        // Disable all colliders
         foreach (var col in heldColliders)
         {
             col.enabled = false;
         }
 
-        // Disable rigidbody physics
+        // Disable physics
         if (heldRigidbody != null)
         {
             heldRigidbody.useGravity = false;
             heldRigidbody.isKinematic = true;
         }
 
-        // Attach to hand
-        obj.transform.SetParent(handHold);
+        // Determine which hold point to use based on tag
+        Transform grabPoint = bigObjectTags.Contains(obj.tag) ? distantHoldPoint : handHold;
+
+        // Parent and position the object
+        obj.transform.SetParent(grabPoint);
         obj.transform.localPosition = Vector3.zero;
         obj.transform.localRotation = Quaternion.identity;
     }
@@ -63,14 +69,14 @@ public class ObjectGrabber : MonoBehaviour
             col.enabled = true;
         }
 
-        // Enable physics again
+        // Enable physics
         if (heldRigidbody != null)
         {
             heldRigidbody.useGravity = true;
             heldRigidbody.isKinematic = false;
         }
 
-        // Detach from hand
+        // Detach object
         heldObject.transform.SetParent(null);
 
         heldObject = null;
