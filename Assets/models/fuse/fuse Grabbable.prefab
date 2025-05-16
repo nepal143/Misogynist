@@ -100,6 +100,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 7450210049204489263}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0969507c0e8641242b25df4849e93a6e,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3692155721609361171}
     - targetCorrespondingSourceObject: {fileID: 8164078558771037576, guid: 0969507c0e8641242b25df4849e93a6e,
         type: 3}
       insertIndex: -1
@@ -123,6 +127,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ed7ef1782c91ca40992406d60308b79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  objectDisplayName: Electric Fuse
 --- !u!54 &7450210049204489263
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -150,6 +155,27 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!65 &3692155721609361171
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1773171656529818121}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.07873527, y: 0.30082533, z: 0.10000001}
+  m_Center: {x: -0.010632359, y: 0.003654216, z: 0}
 --- !u!1 &7284108241508977360 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8164078558771037576, guid: 0969507c0e8641242b25df4849e93a6e,

@@ -8,6 +8,7 @@ TagManager:
   - Grabbable
   - Fuse
   - Tire
+  - objectName
   layers:
   - Default
   - TransparentFX

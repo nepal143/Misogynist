@@ -66,7 +66,7 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 8b92a90fab309bf4d8200e496cabf72b,
         type: 3}
       propertyPath: m_Name
-      value: KEY01
+      value: CarKey
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -151,3 +151,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ed7ef1782c91ca40992406d60308b79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  objectDisplayName: CarKeys
