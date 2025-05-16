@@ -195,20 +195,27 @@ IEnumerator OpenDoorAndWait(MonoBehaviour doorScript)
     isWaitingForDoor = false;
 }
 
-
-    void MoveToRandomPosition()
+void MoveToRandomPosition()
+{
+    for (int attempt = 0; attempt < 10; attempt++) // try up to 10 times
     {
         Vector3 randomDirection = Random.insideUnitSphere * walkRadius;
-        randomDirection += transform.position;
+        randomDirection.y = 0f; // keep it flat
+        Vector3 potentialDestination = transform.position + randomDirection;
 
-        if (NavMesh.SamplePosition(randomDirection, out NavMeshHit hit, walkRadius, NavMesh.AllAreas))
+        if (NavMesh.SamplePosition(potentialDestination, out NavMeshHit hit, walkRadius, NavMesh.AllAreas))
         {
-            agent.SetDestination(hit.position);
-            Debug.Log("Moving to: " + hit.position);
-        }
-        else
-        {
-            Debug.LogWarning("No valid NavMesh point found.");
+            float distance = Vector3.Distance(transform.position, hit.position);
+
+            if (distance >= 5f && distance <= 15f)
+            {
+                agent.SetDestination(hit.position);
+                Debug.Log("Moving to valid point: " + hit.position);
+                return;
+            }
         }
     }
+
+    Debug.LogWarning("Failed to find a valid destination in 10 attempts.");
+}
 }
