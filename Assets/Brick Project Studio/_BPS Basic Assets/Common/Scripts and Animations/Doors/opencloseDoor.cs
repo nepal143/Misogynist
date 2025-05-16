@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using UnityEngine;
-using UnityEngine.AI; // Required for NavMeshObstacle
+using UnityEngine.AI;
 
 namespace SojaExiles
 {
@@ -9,17 +9,29 @@ namespace SojaExiles
         public Animator openandclose;
         public bool open;
         public Transform Player;
-        public NavMeshObstacle navMeshObstacle; // Reference to obstacle
+        public NavMeshObstacle navMeshObstacle;
+
+        [Header("Door Sounds")]
+        public AudioClip openSound;
+        public AudioClip closeSound;
+
+        private AudioSource audioSource;
 
         void Awake()
-{
-    navMeshObstacle = GetComponent<NavMeshObstacle>();
-}
+        {
+            navMeshObstacle = GetComponent<NavMeshObstacle>();
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.spatialBlend = 1f; // Make sound 3D
+            audioSource.rolloffMode = AudioRolloffMode.Linear;
+            audioSource.minDistance = 1f;
+            audioSource.maxDistance = 10f;
+            audioSource.playOnAwake = false;
+        }
+
         void Start()
         {
             open = false;
 
-            // Auto-assign player transform
             GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
             if (playerObject != null)
             {
@@ -30,7 +42,6 @@ namespace SojaExiles
                 Debug.LogWarning("Player object with tag 'Player' not found!");
             }
 
-            // Auto-assign NavMeshObstacle if not manually set
             if (navMeshObstacle == null)
             {
                 navMeshObstacle = GetComponent<NavMeshObstacle>();
@@ -42,7 +53,7 @@ namespace SojaExiles
             if (Player)
             {
                 float dist = Vector3.Distance(Player.position, transform.position);
-                if (dist <  2.3f)
+                if (dist < 2.3f)
                 {
                     if (!open && Input.GetMouseButtonDown(0))
                     {
@@ -56,30 +67,35 @@ namespace SojaExiles
             }
         }
 
-public IEnumerator opening()
-{
-    print("you are opening the door");
+        public IEnumerator opening()
+        {
+            Debug.Log("You are opening the door");
 
-    if (navMeshObstacle != null && navMeshObstacle.enabled)
-        navMeshObstacle.enabled = false;
+            if (navMeshObstacle != null && navMeshObstacle.enabled)
+                navMeshObstacle.enabled = false;
 
-    openandclose.Play("Opening"); // or Closetopenandclose
-    open = true;
+            if (openSound != null)
+                audioSource.PlayOneShot(openSound);
 
-    yield return new WaitForSeconds(0.5f);
-}
+            openandclose.Play("Opening");
+            open = true;
+
+            yield return new WaitForSeconds(0.5f);
+        }
 
         public IEnumerator closing()
         {
             Debug.Log("You are closing the door");
 
+            if (closeSound != null)
+                audioSource.PlayOneShot(closeSound);
+
             openandclose.Play("Closing");
             open = false;
 
-            // Enable obstacle after closing
             if (navMeshObstacle != null)
             {
-                yield return new WaitForSeconds(0.5f); // Wait until animation is done
+                yield return new WaitForSeconds(0.5f);
                 navMeshObstacle.enabled = true;
                 Debug.Log("NavMeshObstacle re-enabled");
             }

@@ -87,34 +87,52 @@ public class WifeAIController : MonoBehaviour
     }
 }
 
-    bool CheckForDoorInPath()
+bool IsDoorAlreadyOpen(MonoBehaviour doorScript)
+{
+    var openProp = doorScript.GetType().GetProperty("isOpen");
+    if (openProp != null)
     {
-        if (agent.hasPath)
+        bool isOpen = (bool)openProp.GetValue(doorScript);
+        return isOpen;
+    }
+
+    var openMethod = doorScript.GetType().GetMethod("GetIsOpen");
+    if (openMethod != null)
+    {
+        return (bool)openMethod.Invoke(doorScript, null);
+    }
+
+    Debug.LogWarning("Door script has no isOpen property or GetIsOpen method.");
+    return false; // assume closed if unknown
+}
+bool CheckForDoorInPath()
+{
+    if (agent.hasPath)
+    {
+        Vector3 nextPos = agent.steeringTarget;
+        Vector3 direction = (nextPos - transform.position).normalized;
+        float distance = Vector3.Distance(transform.position, nextPos);
+
+        RaycastHit[] hits = Physics.SphereCastAll(transform.position + Vector3.up * 1f, 0.5f, direction, Mathf.Min(distance, doorCheckDistance));
+        foreach (var hit in hits)
         {
-            Vector3 nextPos = agent.steeringTarget;
-            Vector3 direction = (nextPos - transform.position).normalized;
-            float distance = Vector3.Distance(transform.position, nextPos);
-
-            RaycastHit[] hits = Physics.SphereCastAll(transform.position + Vector3.up * 1f, 0.5f, direction, Mathf.Min(distance, doorCheckDistance));
-            foreach (var hit in hits)
+            GameObject go = hit.collider.gameObject;
+            if (go.CompareTag("Door"))
             {
-                GameObject go = hit.collider.gameObject;
-                if (go.CompareTag("Door"))
-                {
-                    MonoBehaviour doorScript = go.GetComponent("ClosetopencloseDoor") as MonoBehaviour;
-                    if (doorScript == null)
-                        doorScript = go.GetComponent("opencloseDoor") as MonoBehaviour;
+                MonoBehaviour doorScript = go.GetComponent("ClosetopencloseDoor") as MonoBehaviour;
+                if (doorScript == null)
+                    doorScript = go.GetComponent("opencloseDoor") as MonoBehaviour;
 
-                    if (doorScript != null)
-                    {
-                        StartCoroutine(OpenDoorAndWait(doorScript));
-                        return true;
-                    }
+                if (doorScript != null && !IsDoorAlreadyOpen(doorScript))
+                {
+                    StartCoroutine(OpenDoorAndWait(doorScript));
+                    return true;
                 }
             }
         }
-        return false;
     }
+    return false;
+}
 
 IEnumerator OpenDoorAndWait(MonoBehaviour doorScript)
 {
@@ -151,7 +169,7 @@ IEnumerator OpenDoorAndWait(MonoBehaviour doorScript)
     if (doorCollider != null)
     {
         doorCollider.enabled = false;
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(1.5f);
         doorCollider.enabled = true;
         Debug.Log("Temporarily disabled door collider.");
     }
