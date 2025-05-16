@@ -42,7 +42,7 @@ namespace SojaExiles
             if (Player)
             {
                 float dist = Vector3.Distance(Player.position, transform.position);
-                if (dist < 15f)
+                if (dist <  2.3f)
                 {
                     if (!open && Input.GetMouseButtonDown(0))
                     {

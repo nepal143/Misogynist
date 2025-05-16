@@ -16,7 +16,7 @@ public class TableFlipR: MonoBehaviour {
 		{
 			if (Player) {
 				float dist = Vector3.Distance (Player.position, transform.position);
-				if (dist < 15) {
+				if (dist <  2.3) {
 					if (open == false) {
 						if (Input.GetMouseButtonDown (0)) {
 							StartCoroutine (opening ());

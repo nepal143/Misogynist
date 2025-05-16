@@ -43,7 +43,7 @@ namespace SojaExiles
             if (Player)
             {
                 float dist = Vector3.Distance(Player.position, transform.position);
-                if (dist < 15f)
+                if (dist < 2f)
                 {
                     if (!open && Input.GetMouseButtonDown(0))
                     {
@@ -57,14 +57,22 @@ namespace SojaExiles
             }
         }
 
-      public IEnumerator opening()
+public IEnumerator opening()
 {
-    print("you are opening the door");
+    Debug.Log("Opening animation triggered");
 
-    if (navMeshObstacle != null && navMeshObstacle.enabled)
+    if (navMeshObstacle != null)
         navMeshObstacle.enabled = false;
 
-    Closetopenandclose.Play("Opening"); // or Closetopenandclose
+    if (Closetopenandclose != null)
+    {
+        Closetopenandclose.Play("ClosetOpening");
+    }
+    else
+    {
+        Debug.LogWarning("Animator is not assigned!");
+    }
+
     open = true;
 
     yield return new WaitForSeconds(0.5f);
