@@ -2,9 +2,9 @@ using UnityEngine;
 
 public class CarTireInstaller : MonoBehaviour
 {
-    public Transform playerHand;              // Where the tire is held
-    public Transform tireInstallPosition;     // Position + rotation for tire
-    public Transform objectToRotate;          // The other object to rotate (e.g. wheel mount)
+    public Transform playerHand;              // Player's hand holding the tire
+    public GameObject preInstalledTire;       // The disabled tire object already placed in car
+    public Transform objectToRotate;          // Optional object to rotate (e.g. wheel mount)
 
     void OnMouseDown()
     {
@@ -14,7 +14,7 @@ public class CarTireInstaller : MonoBehaviour
 
             if (heldItem.CompareTag("Tire"))
             {
-                InstallTire(heldItem);
+                InstallTire(heldItem.gameObject);
             }
         }
         else
@@ -23,21 +23,24 @@ public class CarTireInstaller : MonoBehaviour
         }
     }
 
-    void InstallTire(Transform tire)
+    void InstallTire(GameObject heldTire)
     {
-        // Set position and rotation of the tire
-        tire.position = tireInstallPosition.position;
-        tire.rotation = tireInstallPosition.rotation;
+        // Enable the pre-installed tire on the car
+        if (preInstalledTire != null)
+        {
+            preInstalledTire.SetActive(true);
+        }
 
-        // Parent it so it stays fixed
-        tire.SetParent(tireInstallPosition);
+        // Remove the tire from the player's hand
+        heldTire.transform.SetParent(null);
+        Destroy(heldTire);
 
-        // Set the assigned object's rotation to (0, 90, 0)
+        // Rotate the optional object
         if (objectToRotate != null)
         {
             objectToRotate.rotation = Quaternion.Euler(0f, 90f, 0f);
         }
 
-        Debug.Log("Tire installed. Assigned object rotated.");
+        Debug.Log("Tire installed successfully. Hand tire removed, car tire enabled.");
     }
 }

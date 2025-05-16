@@ -12,26 +12,32 @@ public class ObjectGrabber : MonoBehaviour
     private Rigidbody heldRigidbody = null;
     private Collider[] heldColliders = null;
 
-    void Update()
+void Update()
+{
+    if (Input.GetMouseButtonDown(0))
     {
-        if (Input.GetMouseButtonDown(0) && heldObject == null)
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit, grabDistance))
         {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit, grabDistance))
+            GrabbableRoot grabbable = hit.collider.GetComponentInParent<GrabbableRoot>();
+            if (grabbable != null)
             {
-                GrabbableRoot grabbable = hit.collider.GetComponentInParent<GrabbableRoot>();
-                if (grabbable != null)
+                // Auto-drop if already holding something
+                if (heldObject != null)
                 {
-                    GrabObject(grabbable.gameObject);
+                    DropObject();
                 }
+
+                GrabObject(grabbable.gameObject);
             }
         }
-
-        if (Input.GetKeyDown(KeyCode.Q) && heldObject != null)
-        {
-            DropObject();
-        }
     }
+
+    if (Input.GetKeyDown(KeyCode.Q) && heldObject != null)
+    {
+        DropObject();
+    }
+}
 
     void GrabObject(GameObject obj)
     {
