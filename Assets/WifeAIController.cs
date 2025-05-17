@@ -28,6 +28,11 @@ public class WifeAIController : MonoBehaviour
     [Header("Patrol Points")]
     public Transform[] patrolPoints;
 
+    [Header("Hit Settings")]
+public GameObject playerGameObject;  // assign your player GameObject in inspector
+public Camera hitCamera;    
+private bool hasHitPlayer = false;
+
     private int currentPatrolIndex = 0;
     private NavMeshAgent agent;
     private Animator animator;
@@ -55,6 +60,17 @@ public class WifeAIController : MonoBehaviour
         agent.speed = movementSpeed;
         agent.stoppingDistance = arrivalThreshold;
 
+        // Assign player by tag at start if not already assigned
+        if (player == null)
+        {
+            GameObject found = GameObject.FindWithTag("Player");
+            if (found != null)
+            {
+                player = found.transform;
+                Debug.Log("[WifeAI] Player found on Start.");
+            }
+        }
+
         if (PlayerActivityTracker.Instance != null)
             PlayerActivityTracker.Instance.OnActivityAlert += HandleActivityAlert;
 
@@ -66,6 +82,11 @@ public class WifeAIController : MonoBehaviour
 
     void Update()
     {
+         if (hasHitPlayer)
+    {
+        // Stop any further AI logic after hitting player
+        return;
+    }
         // 1. Reacquire player if missing or inactive
         if (player == null || !player.gameObject.activeInHierarchy)
         {
@@ -223,11 +244,26 @@ public class WifeAIController : MonoBehaviour
         return false;
     }
 
-    void HitPlayer()
-    {
-        Debug.Log("[WifeAI] Hit Player!");
-        // TODO: Disable player controls, trigger death, camera switch, etc.
-    }
+void HitPlayer()
+{
+    if (hasHitPlayer) return; // prevent double hitting
+
+    Debug.Log("[WifeAI] Hit Player!");
+
+    hasHitPlayer = true;
+
+    if (playerGameObject != null)
+        playerGameObject.SetActive(false);
+
+    if (hitCamera != null)
+        hitCamera.enabled = true;
+
+    if (animator != null)
+        animator.SetBool("Hit", true);  // set the bool parameter "Hit" to true
+
+    if (agent != null)
+        agent.isStopped = true;
+}
 
     void HandleFootsteps()
     {
@@ -288,38 +324,37 @@ public class WifeAIController : MonoBehaviour
         }
     }
 
-IEnumerator OpenDoorRoutine(MonoBehaviour doorScript)
-{
-    isOpeningDoor = true;
-    agent.isStopped = true;
-
-    yield return new WaitForSeconds(0.5f);
-
-    var method = doorScript.GetType().GetMethod("opening");
-    if (method != null)
+    IEnumerator OpenDoorRoutine(MonoBehaviour doorScript)
     {
-        IEnumerator coroutine = method.Invoke(doorScript, null) as IEnumerator;
-        if (coroutine != null)
-            yield return StartCoroutine(coroutine);
+        isOpeningDoor = true;
+        agent.isStopped = true;
+
+        yield return new WaitForSeconds(0.5f);
+
+        var method = doorScript.GetType().GetMethod("opening");
+        if (method != null)
+        {
+            IEnumerator coroutine = method.Invoke(doorScript, null) as IEnumerator;
+            if (coroutine != null)
+                yield return StartCoroutine(coroutine);
+        }
+
+        // Disable BoxCollider after opening door
+        BoxCollider boxCollider = doorScript.GetComponent<BoxCollider>();
+        if (boxCollider != null)
+        {
+            boxCollider.enabled = false;
+            Debug.Log("[WifeAI] Disabled BoxCollider on door.");
+
+            // Wait 2 seconds before enabling the collider again
+            yield return new WaitForSeconds(2f);
+            boxCollider.enabled = true;
+            Debug.Log("[WifeAI] Re-enabled BoxCollider on door.");
+        }
+
+        agent.isStopped = false;
+        isOpeningDoor = false;
     }
-
-    // Disable BoxCollider after opening door
-    BoxCollider boxCollider = doorScript.GetComponent<BoxCollider>();
-    if (boxCollider != null)
-    {
-        boxCollider.enabled = false;
-        Debug.Log("[WifeAI] Disabled BoxCollider on door.");
-
-        // Wait 2 seconds before enabling the collider again
-        yield return new WaitForSeconds(2f);
-        boxCollider.enabled = true;
-        Debug.Log("[WifeAI] Re-enabled BoxCollider on door.");
-    }
-
-    agent.isStopped = false;
-    isOpeningDoor = false;
-}
-
 
     bool IsDoorLocked(MonoBehaviour doorScript)
     {
