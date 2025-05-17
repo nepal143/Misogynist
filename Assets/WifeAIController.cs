@@ -201,22 +201,37 @@ public class WifeAIController : MonoBehaviour
         int index = Random.Range(0, footstepClips.Length);
         footstepAudio.PlayOneShot(footstepClips[index]);
     }
-
-    bool CheckForDoorInPath()
+bool CheckForDoorInPath()
+{
+    if (agent.hasPath)
     {
-        if (agent.hasPath)
-        {
-            Vector3 direction = (agent.steeringTarget - transform.position).normalized;
-            float distance = Vector3.Distance(transform.position, agent.steeringTarget);
+        Vector3 direction = (agent.steeringTarget - transform.position).normalized;
+        float distance = Vector3.Distance(transform.position, agent.steeringTarget);
 
-            RaycastHit[] hits = Physics.SphereCastAll(transform.position + Vector3.up, 0.5f, direction, Mathf.Min(distance, doorCheckDistance));
-            foreach (var hit in hits)
+        RaycastHit[] hits = Physics.SphereCastAll(transform.position + Vector3.up, 0.5f, direction, Mathf.Min(distance, doorCheckDistance));
+        foreach (var hit in hits)
+        {
+            GameObject go = hit.collider.gameObject;
+            if (go.CompareTag("Door"))
             {
-                GameObject go = hit.collider.gameObject;
-                if (go.CompareTag("Door"))
+                MonoBehaviour doorScript = go.GetComponent("ClosetopencloseDoor") as MonoBehaviour ?? go.GetComponent("opencloseDoor") as MonoBehaviour;
+                if (doorScript != null)
                 {
-                    MonoBehaviour doorScript = go.GetComponent("ClosetopencloseDoor") as MonoBehaviour ?? go.GetComponent("opencloseDoor") as MonoBehaviour;
-                    if (doorScript != null && !IsDoorAlreadyOpen(doorScript))
+                    if (IsDoorLocked(doorScript))
+                    {
+                        Debug.Log("[AI] Found a locked door. Abandoning path.");
+                        if (currentState == AIState.Patrolling)
+                        {
+                            MoveToRandomPosition(); // pick a different patrol point
+                        }
+                        else if (currentState == AIState.Chasing || currentState == AIState.Investigating)
+                        {
+                            agent.ResetPath(); // stop moving
+                        }
+                        return false; // do not continue through this door
+                    }
+
+                    if (!IsDoorAlreadyOpen(doorScript))
                     {
                         Debug.Log("[AI] Door detected. Attempting to open.");
                         StartCoroutine(OpenDoorAndWait(doorScript));
@@ -225,8 +240,18 @@ public class WifeAIController : MonoBehaviour
                 }
             }
         }
-        return false;
     }
+    return false;
+}
+bool IsDoorLocked(MonoBehaviour doorScript)
+{
+    var lockedField = doorScript.GetType().GetField("isLocked");
+    if (lockedField != null)
+        return (bool)lockedField.GetValue(doorScript);
+
+    return false;
+}
+
 
     bool IsDoorAlreadyOpen(MonoBehaviour doorScript)
     {
