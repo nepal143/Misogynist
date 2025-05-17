@@ -2,344 +2,391 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 
+[RequireComponent(typeof(NavMeshAgent), typeof(Animator))]
 public class WifeAIController : MonoBehaviour
 {
-    public enum AIState { Patrolling, Investigating, Chasing }
-    public AIState currentState = AIState.Patrolling;
+    public enum AIState { Patrolling, Investigating, Chasing, Searching }
 
-    public float walkRadius = 10f;
+    [Header("General Settings")]
+    public AIState currentState = AIState.Patrolling;
     public float waitTime = 2f;
     public float movementSpeed = 3.5f;
-    public float doorCheckDistance = 2f;
-
-    private NavMeshAgent agent;
-    private Animator animator;
-    private float waitTimer = 0f;
-    private bool isWaitingForDoor = false;
-
-    private Vector3 lastPosition;
-    private float stuckTimer = 0f;
-    public float stuckThreshold = 2f;
-
-    [Header("Player Detection")]
-    public Transform player;
-    public float sightRange = 15f;
-    public float fieldOfView = 120f;
+    public float stuckCheckTime = 2f;
+    public float arrivalThreshold = 0.3f;
     public LayerMask obstacleMask;
 
-    [Header("Footstep Sounds")]
-    public AudioClip[] footstepClips;
-    private AudioSource footstepAudio;
-    private float stepInterval = 0.5f;
-    private float stepTimer = 0f;
+    [Header("Detection")]
+    public Transform player;
+    public Transform eyePoint; // 👁️ NEW: Set this in inspector
+    public float sightRange = 20f;
+    public float fieldOfView = 110f;
 
-    [Header("Sound Detection")]
-    public float noiseThreshold = 1.0f;
-    public float noiseResetTime = 3f;
-    private float noiseTimer = 0f;
+    [Header("Footsteps")]
+    public AudioClip[] footstepClips;
+    public float stepInterval = 0.5f;
+
+    [Header("Patrol Points")]
+    public Transform[] patrolPoints;
+
+    private int currentPatrolIndex = 0;
+    private NavMeshAgent agent;
+    private Animator animator;
+    private AudioSource footstepAudio;
+
+    private float waitTimer;
+    private float stepTimer;
+    private float stuckTimer;
+    private float investigateTimer;
+
+    private Vector3 lastPos;
     private Vector3 investigateTarget;
+    private bool isOpeningDoor;
+
+    private Coroutine overrideSearchRoutine;
+    private bool isTrackingPlayer;
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
-
-        agent.speed = movementSpeed;
-
-        lastPosition = transform.position;
-        player = GameObject.FindGameObjectWithTag("Player")?.transform;
-
         footstepAudio = gameObject.AddComponent<AudioSource>();
         footstepAudio.spatialBlend = 1f;
-        footstepAudio.rolloffMode = AudioRolloffMode.Linear;
 
-        Debug.Log("Wife AI initialized. Starting patrol.");
-        MoveToRandomPosition();
+        agent.speed = movementSpeed;
+        agent.stoppingDistance = arrivalThreshold;
+
+        player = GameObject.FindGameObjectWithTag("Player")?.transform;
+
+        if (PlayerActivityTracker.Instance != null)
+        {
+            PlayerActivityTracker.Instance.OnActivityAlert += HandleActivityAlert;
+        }
+
+        if (patrolPoints.Length > 0)
+        {
+            MoveToNextPatrolPoint();
+        }
+
+        lastPos = transform.position;
     }
 
     void Update()
     {
-        if (isWaitingForDoor)
+        if (isOpeningDoor || player == null) return;
+        if (player == null || !player.gameObject.activeInHierarchy)
+{
+    GameObject found = GameObject.FindGameObjectWithTag("Player");
+    if (found != null && found.activeInHierarchy)
+    {
+        player = found.transform;
+        if (isTrackingPlayer)
         {
-            StopMovement();
-            return;
+            Debug.Log("[WifeAI] Player reactivated. Resuming chase.");
+            currentState = AIState.Chasing;
         }
-
-        if (CheckForDoorInPath()) return;
-
-        if (player == null)
-        {
-            Debug.LogWarning("Player transform not assigned or found!");
-            return;
-        }
-
-        bool seesPlayer = CanSeePlayer();
-        Debug.Log($"[AI] CanSeePlayer: {seesPlayer}, CurrentState: {currentState}");
-
-        if (seesPlayer)
-        {
-            if (currentState != AIState.Chasing)
-            {
-                Debug.Log("[AI] Player spotted! Switching to CHASING.");
-                currentState = AIState.Chasing;
-            }
-            agent.SetDestination(player.position);
-        }
-        else
-        {
-            if (currentState == AIState.Chasing)
-            {
-                Debug.Log("[AI] Lost sight of player. Returning to PATROLLING.");
-                currentState = AIState.Patrolling;
-                MoveToRandomPosition();
-            }
-            else if (currentState == AIState.Investigating)
-            {
-                if (noiseTimer > 0f)
-                {
-                    noiseTimer -= Time.deltaTime;
-                }
-                else
-                {
-                    Debug.Log("[AI] Investigation time over. Returning to PATROLLING.");
-                    currentState = AIState.Patrolling;
-                    MoveToRandomPosition();
-                }
-            }
-        }
+    }
+}
 
         switch (currentState)
         {
-            case AIState.Investigating:
-                agent.SetDestination(investigateTarget);
+            case AIState.Chasing:
+                ChasePlayer();
                 break;
-
+            case AIState.Investigating:
+                Investigate();
+                break;
             case AIState.Patrolling:
-                if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
-                {
-                    waitTimer += Time.deltaTime;
-                    if (waitTimer >= waitTime)
-                    {
-                        MoveToRandomPosition();
-                        waitTimer = 0f;
-                    }
-                }
+                Patrol();
+                break;
+            case AIState.Searching:
+                // Search logic handled in coroutine
                 break;
         }
 
-        UpdateAnimationsAndFootsteps();
+        HandleFootsteps();
+        CheckIfStuck();
+        TryOpenDoors();
+        // If player reappears and was being tracked before, resume chasing
+if (isTrackingPlayer && player.gameObject.activeInHierarchy && currentState != AIState.Chasing)
+{
+    Debug.Log("[WifeAI] Player reappeared, resuming chase.");
+    currentState = AIState.Chasing;
+}
+
     }
 
+    void Patrol()
+    {
+        if (!agent.pathPending &&
+            (!agent.hasPath || agent.remainingDistance <= arrivalThreshold || agent.velocity.sqrMagnitude < 0.01f))
+        {
+            waitTimer += Time.deltaTime;
+
+            if (waitTimer >= waitTime)
+            {
+                waitTimer = 0f;
+                MoveToNextPatrolPoint();
+            }
+        }
+
+        if (CanSeePlayer())
+        {
+            currentState = AIState.Chasing;
+        }
+    }
+
+    void Investigate()
+    {
+        agent.SetDestination(investigateTarget);
+
+        if (agent.remainingDistance <= arrivalThreshold)
+        {
+            investigateTimer -= Time.deltaTime;
+            if (investigateTimer <= 0f)
+            {
+                currentState = AIState.Patrolling;
+                MoveToNextPatrolPoint();
+            }
+        }
+
+        if (CanSeePlayer())
+        {
+            currentState = AIState.Chasing;
+        }
+    }
+
+void ChasePlayer()
+{
+    if (player == null) return;
+
+    if (!player.gameObject.activeInHierarchy)
+    {
+        if (isTrackingPlayer)
+        {
+            Debug.Log("[WifeAI] Lost visual contact, player went inactive.");
+        }
+        isTrackingPlayer = true; // REMEMBER that she was chasing the player
+        return;
+    }
+
+    isTrackingPlayer = true;
+
+    if (CanSeePlayer())
+    {
+        Vector3 playerPos = player.position;
+
+        if (NavMesh.SamplePosition(playerPos, out NavMeshHit hit, 1.0f, NavMesh.AllAreas))
+        {
+            agent.SetDestination(hit.position);
+        }
+        else
+        {
+            // Can't reach exact playerPos; get closest possible point
+            if (NavMesh.SamplePosition(playerPos, out NavMeshHit nearest, 10f, NavMesh.AllAreas))
+            {
+                agent.SetDestination(nearest.position);
+                Debug.Log("[WifeAI] Player visible but unreachable. Heading as close as possible.");
+            }
+        }
+
+        float distance = Vector3.Distance(transform.position, player.position);
+        if (distance <= 2f)
+        {
+            HitPlayer();
+        }
+    }
+    else
+    {
+        // Lost sight of the player
+        if (isTrackingPlayer)
+        {
+            investigateTarget = player.position;
+            investigateTimer = 4f;
+            currentState = AIState.Investigating;
+            Debug.Log("[WifeAI] Lost player, investigating last seen location.");
+            isTrackingPlayer = false;
+        }
+    }
+}
     bool CanSeePlayer()
     {
-        if (!player) return false;
+        if (player == null || eyePoint == null || !player.gameObject.activeInHierarchy) return false;
 
-        Vector3 dirToPlayer = player.position - transform.position;
-        float distance = dirToPlayer.magnitude;
-        float angle = Vector3.Angle(transform.forward, dirToPlayer);
+        Vector3 dir = player.position - eyePoint.position;
+        if (dir.magnitude > sightRange) return false;
 
-        bool inRange = distance < sightRange;
-        bool inFOV = angle < fieldOfView / 2f;
+        float angle = Vector3.Angle(eyePoint.forward, dir);
+        if (angle > fieldOfView / 2f) return false;
 
-        bool lineOfSight = !Physics.Linecast(transform.position + Vector3.up, player.position + Vector3.up, obstacleMask);
+        if (!Physics.Raycast(eyePoint.position, dir.normalized, out RaycastHit hit, sightRange, obstacleMask))
+            return false;
 
-        Debug.Log($"[AI] CanSeePlayer check - Distance: {distance:F2}, Angle: {angle:F2}, InRange: {inRange}, InFOV: {inFOV}, LineOfSight: {lineOfSight}");
-
-        return inRange && inFOV && lineOfSight;
+        return hit.transform == player;
     }
 
-    void UpdateAnimationsAndFootsteps()
+    void HitPlayer()
     {
-        bool isWalking = agent.velocity.magnitude > 0.1f;
-        animator.SetBool("Walking", isWalking);
-        animator.SetBool("Idle", !isWalking);
+        Debug.Log("Hit Player");
+        // Add more logic later like animations or scene changes
+    }
 
-        if (isWalking)
+    void HandleFootsteps()
+    {
+        bool isMoving = agent.velocity.magnitude > 0.1f;
+        animator.SetBool("Walking", isMoving);
+        animator.SetBool("Idle", !isMoving);
+
+        if (isMoving)
         {
             stepTimer += Time.deltaTime;
             if (stepTimer >= stepInterval)
             {
-                PlayFootstepSound();
                 stepTimer = 0f;
-            }
-
-            float movement = Vector3.Distance(transform.position, lastPosition);
-            if (movement < 0.02f)
-            {
-                stuckTimer += Time.deltaTime;
-                if (stuckTimer >= stuckThreshold)
+                if (footstepClips.Length > 0)
                 {
-                    Debug.Log("[AI] Wife is stuck. Choosing new patrol point.");
-                    MoveToRandomPosition();
-                    stuckTimer = 0f;
+                    AudioClip clip = footstepClips[Random.Range(0, footstepClips.Length)];
+                    footstepAudio.PlayOneShot(clip);
                 }
             }
-            else
+        }
+        else
+        {
+            stepTimer = 0f;
+        }
+    }
+
+    void CheckIfStuck()
+    {
+        float moved = Vector3.Distance(transform.position, lastPos);
+        if (moved < 0.05f)
+        {
+            stuckTimer += Time.deltaTime;
+            if (stuckTimer > stuckCheckTime)
             {
+                currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
+                agent.SetDestination(patrolPoints[currentPatrolIndex].position);
                 stuckTimer = 0f;
             }
         }
         else
         {
             stuckTimer = 0f;
-            stepTimer = 0f;
         }
 
-        lastPosition = transform.position;
+        lastPos = transform.position;
     }
 
-    void StopMovement()
+    void TryOpenDoors()
     {
-        agent.isStopped = true;
-        animator.SetBool("Walking", false);
-        animator.SetBool("Idle", true);
-    }
+        if (!agent.hasPath) return;
 
-    void PlayFootstepSound()
-    {
-        if (footstepClips.Length == 0) return;
-        int index = Random.Range(0, footstepClips.Length);
-        footstepAudio.PlayOneShot(footstepClips[index]);
-    }
-bool CheckForDoorInPath()
-{
-    if (agent.hasPath)
-    {
-        Vector3 direction = (agent.steeringTarget - transform.position).normalized;
-        float distance = Vector3.Distance(transform.position, agent.steeringTarget);
-
-        RaycastHit[] hits = Physics.SphereCastAll(transform.position + Vector3.up, 0.5f, direction, Mathf.Min(distance, doorCheckDistance));
-        foreach (var hit in hits)
+        Vector3 dir = agent.steeringTarget - transform.position;
+        if (Physics.Raycast(transform.position + Vector3.up, dir.normalized, out RaycastHit hit, 2f))
         {
-            GameObject go = hit.collider.gameObject;
-            if (go.CompareTag("Door"))
+            if (hit.collider.CompareTag("Door"))
             {
-                MonoBehaviour doorScript = go.GetComponent("ClosetopencloseDoor") as MonoBehaviour ?? go.GetComponent("opencloseDoor") as MonoBehaviour;
+                MonoBehaviour doorScript = hit.collider.GetComponent("opencloseDoor") as MonoBehaviour;
                 if (doorScript != null)
                 {
                     if (IsDoorLocked(doorScript))
                     {
-                        Debug.Log("[AI] Found a locked door. Abandoning path.");
-                        if (currentState == AIState.Patrolling)
-                        {
-                            MoveToRandomPosition(); // pick a different patrol point
-                        }
-                        else if (currentState == AIState.Chasing || currentState == AIState.Investigating)
-                        {
-                            agent.ResetPath(); // stop moving
-                        }
-                        return false; // do not continue through this door
+                        MoveToNextPatrolPoint();
                     }
-
-                    if (!IsDoorAlreadyOpen(doorScript))
+                    else if (!IsDoorOpen(doorScript))
                     {
-                        Debug.Log("[AI] Door detected. Attempting to open.");
-                        StartCoroutine(OpenDoorAndWait(doorScript));
-                        return true;
+                        StartCoroutine(OpenDoorRoutine(doorScript));
                     }
                 }
             }
         }
     }
-    return false;
-}
-bool IsDoorLocked(MonoBehaviour doorScript)
-{
-    var lockedField = doorScript.GetType().GetField("isLocked");
-    if (lockedField != null)
-        return (bool)lockedField.GetValue(doorScript);
 
-    return false;
-}
-
-
-    bool IsDoorAlreadyOpen(MonoBehaviour doorScript)
+    IEnumerator OpenDoorRoutine(MonoBehaviour doorScript)
     {
-        var openProp = doorScript.GetType().GetProperty("isOpen");
-        if (openProp != null) return (bool)openProp.GetValue(doorScript);
+        isOpeningDoor = true;
+        agent.isStopped = true;
 
-        var openMethod = doorScript.GetType().GetMethod("GetIsOpen");
-        if (openMethod != null) return (bool)openMethod.Invoke(doorScript, null);
-
-        return false;
-    }
-
-    IEnumerator OpenDoorAndWait(MonoBehaviour doorScript)
-    {
-        isWaitingForDoor = true;
-        StopMovement();
-
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.5f);
 
         var method = doorScript.GetType().GetMethod("opening");
         if (method != null)
         {
-            IEnumerator coroutine = method.Invoke(doorScript, null) as IEnumerator;
-            if (coroutine != null)
-                yield return StartCoroutine(coroutine);
+            IEnumerator doorCoroutine = method.Invoke(doorScript, null) as IEnumerator;
+            if (doorCoroutine != null)
+                yield return StartCoroutine(doorCoroutine);
+            else
+                yield return new WaitForSeconds(0.5f);
         }
 
-        Collider doorCollider = doorScript.GetComponent<Collider>();
-        if (doorCollider != null)
-        {
-            doorCollider.enabled = false;
-            yield return new WaitForSeconds(1.5f);
-            doorCollider.enabled = true;
-        }
-
-        isWaitingForDoor = false;
         agent.isStopped = false;
-
-        // After opening door, resume previous behavior:
-        if (currentState == AIState.Patrolling)
-            MoveToRandomPosition();
-        else if (currentState == AIState.Chasing)
-            agent.SetDestination(player.position);
-        else if (currentState == AIState.Investigating)
-            agent.SetDestination(investigateTarget);
+        isOpeningDoor = false;
     }
 
-    void MoveToRandomPosition()
+    bool IsDoorOpen(MonoBehaviour script)
     {
-        for (int attempt = 0; attempt < 10; attempt++)
-        {
-            Vector3 randomDirection = Random.insideUnitSphere * walkRadius;
-            randomDirection.y = 0f;
-            Vector3 potentialDestination = transform.position + randomDirection;
-
-            if (NavMesh.SamplePosition(potentialDestination, out NavMeshHit hit, walkRadius, NavMesh.AllAreas))
-            {
-                float distance = Vector3.Distance(transform.position, hit.position);
-                if (distance >= 5f && distance <= 15f)
-                {
-                    Debug.Log($"[AI] Moving to new patrol position: {hit.position}");
-                    agent.SetDestination(hit.position);
-                    return;
-                }
-            }
-        }
-
-        Debug.LogWarning("[AI] Failed to find a valid patrol destination.");
+        var field = script.GetType().GetField("open");
+        return field != null && (bool)field.GetValue(script);
     }
 
-    public void OnSoundHeard(Vector3 soundPosition, string sourceTag, float strength)
+    bool IsDoorLocked(MonoBehaviour script)
     {
-        Debug.Log($"[AI] Heard noise from {sourceTag} at {soundPosition}, strength: {strength}");
+        var field = script.GetType().GetField("isLocked");
+        return field != null && (bool)field.GetValue(script);
+    }
 
-        if (sourceTag == "Player" && !CanSeePlayer() && strength >= noiseThreshold)
+    void MoveToNextPatrolPoint()
+    {
+        currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
+        agent.SetDestination(patrolPoints[currentPatrolIndex].position);
+    }
+
+    public void OverrideToSearchPlayer(Vector3 lastKnownPlayerPosition)
+    {
+        if (overrideSearchRoutine != null)
+            StopCoroutine(overrideSearchRoutine);
+
+        overrideSearchRoutine = StartCoroutine(SearchAtPosition(lastKnownPlayerPosition));
+    }
+
+    IEnumerator SearchAtPosition(Vector3 position)
+    {
+        currentState = AIState.Searching;
+        agent.isStopped = false;
+        agent.SetDestination(position);
+
+        while (Vector3.Distance(transform.position, position) > arrivalThreshold + 0.2f)
         {
-            investigateTarget = soundPosition;
-            noiseTimer = noiseResetTime;
-
-            if (currentState != AIState.Investigating)
-            {
-                Debug.Log("[AI] Switching to INVESTIGATING state due to sound.");
-                currentState = AIState.Investigating;
-            }
+            yield return null;
         }
-        else
+
+        float searchTime = 3f;
+        while (searchTime > 0f)
         {
-            Debug.Log("[AI] Ignored sound (either not player, player visible, or below threshold).");
+            if (CanSeePlayer())
+            {
+                currentState = AIState.Chasing;
+                overrideSearchRoutine = null;
+                yield break;
+            }
+
+            searchTime -= Time.deltaTime;
+            yield return null;
+        }
+
+        currentState = AIState.Patrolling;
+        MoveToNextPatrolPoint();
+        overrideSearchRoutine = null;
+    }
+
+    private void HandleActivityAlert(Vector3 alertPosition)
+    {
+        if (currentState == AIState.Chasing || isOpeningDoor) return;
+
+        float distance = Vector3.Distance(transform.position, alertPosition);
+        if (distance > 1f)
+        {
+            Debug.Log("[WifeAI] Heard activity at: " + alertPosition);
+            OverrideToSearchPlayer(alertPosition);
         }
     }
 }

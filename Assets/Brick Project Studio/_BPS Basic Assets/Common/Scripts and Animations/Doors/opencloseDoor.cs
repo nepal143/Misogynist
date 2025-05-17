@@ -20,14 +20,13 @@ namespace SojaExiles
         [Header("Door Sounds")]
         public AudioClip openSound;
         public AudioClip closeSound;
-        public AudioClip lockedSound; // 🔐 NEW: assign this in Inspector
+        public AudioClip lockedSound;
 
         [Header("UI Feedback")]
-        public TextMeshProUGUI keyHintText; // 🔠 Assign a TMP text object in Inspector
+        public TextMeshProUGUI keyHintText;
         public float hintDisplayDuration = 2f;
 
         private AudioSource audioSource;
-        private NoiseSource noiseSource;
 
         void Awake()
         {
@@ -38,15 +37,6 @@ namespace SojaExiles
             audioSource.minDistance = 1f;
             audioSource.maxDistance = 10f;
             audioSource.playOnAwake = false;
-
-            noiseSource = gameObject.GetComponent<NoiseSource>();
-            if (noiseSource == null)
-            {
-                noiseSource = gameObject.AddComponent<NoiseSource>();
-                noiseSource.noiseMakerTag = "Player";
-                noiseSource.noiseRadius = 10f;
-                noiseSource.noiseStrength = 0.7f;
-            }
         }
 
         void Start()
@@ -63,6 +53,12 @@ namespace SojaExiles
             {
                 if (Input.GetMouseButtonDown(0))
                 {
+                    // Increase activity only when the player interacts
+                    if (PlayerActivityTracker.Instance != null)
+                    {
+                        PlayerActivityTracker.Instance.IncreaseActivity(15f); // Adjust amount as needed
+                    }
+
                     if (!open)
                         TryToOpen();
                     else
@@ -79,10 +75,6 @@ namespace SojaExiles
                 {
                     Debug.Log("Correct key found. Unlocking door.");
                     isLocked = false;
-
-                    // ✅ DO NOT delete the key anymore
-                    // DestroyKeyFromHand();
-
                     StartCoroutine(opening());
                 }
                 else
@@ -110,9 +102,7 @@ namespace SojaExiles
         void PlayLockedSound()
         {
             if (lockedSound != null)
-            {
                 audioSource.PlayOneShot(lockedSound);
-            }
         }
 
         void ShowKeyHint()
@@ -120,7 +110,7 @@ namespace SojaExiles
             if (keyHintText != null)
             {
                 keyHintText.text = "Need the key: " + requiredKeyName;
-                CancelInvoke(nameof(ClearKeyHint)); // Cancel previous invokes
+                CancelInvoke(nameof(ClearKeyHint));
                 Invoke(nameof(ClearKeyHint), hintDisplayDuration);
             }
         }
@@ -128,9 +118,7 @@ namespace SojaExiles
         void ClearKeyHint()
         {
             if (keyHintText != null)
-            {
                 keyHintText.text = "";
-            }
         }
 
         public IEnumerator opening()
@@ -144,8 +132,6 @@ namespace SojaExiles
             openandclose.Play("Opening");
             open = true;
 
-            noiseSource.EmitNoise();
-
             yield return new WaitForSeconds(0.5f);
         }
 
@@ -156,8 +142,6 @@ namespace SojaExiles
 
             openandclose.Play("Closing");
             open = false;
-
-            noiseSource.EmitNoise();
 
             if (navMeshObstacle != null)
             {

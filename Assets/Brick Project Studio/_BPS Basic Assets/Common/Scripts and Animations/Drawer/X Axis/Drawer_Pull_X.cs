@@ -14,7 +14,6 @@ namespace SojaExiles
         public AudioClip closeSound;
 
         private AudioSource audioSource;
-        private NoiseSource noiseSource;
 
         void Start()
         {
@@ -30,25 +29,25 @@ namespace SojaExiles
             audioSource.minDistance = 1f;
             audioSource.maxDistance = 10f;
             audioSource.playOnAwake = false;
-
-            noiseSource = gameObject.GetComponent<NoiseSource>();
-            if (noiseSource == null)
-            {
-                noiseSource = gameObject.AddComponent<NoiseSource>();
-                noiseSource.noiseMakerTag = "Player";
-                noiseSource.noiseRadius = 8f;
-                noiseSource.noiseStrength = 0.4f;
-            }
         }
 
         void OnMouseOver()
         {
             if (Player && Vector3.Distance(Player.position, transform.position) < 2.3f)
             {
-                if (!open && Input.GetMouseButtonDown(0))
-                    StartCoroutine(opening());
-                else if (open && Input.GetMouseButtonDown(0))
-                    StartCoroutine(closing());
+                if (Input.GetMouseButtonDown(0))
+                {
+                    // Increase activity only when player interacts
+                    if (PlayerActivityTracker.Instance != null)
+                    {
+                        PlayerActivityTracker.Instance.IncreaseActivity(10f); // Adjust value if needed
+                    }
+
+                    if (!open)
+                        StartCoroutine(opening());
+                    else
+                        StartCoroutine(closing());
+                }
             }
         }
 
@@ -60,8 +59,6 @@ namespace SojaExiles
             pull_01.Play("openpull_01");
             open = true;
 
-            noiseSource.EmitNoise();
-
             yield return new WaitForSeconds(0.5f);
         }
 
@@ -72,8 +69,6 @@ namespace SojaExiles
 
             pull_01.Play("closepush_01");
             open = false;
-
-            noiseSource.EmitNoise();
 
             yield return new WaitForSeconds(0.5f);
         }

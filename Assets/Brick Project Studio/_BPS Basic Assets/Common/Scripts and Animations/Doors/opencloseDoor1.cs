@@ -14,7 +14,6 @@ namespace SojaExiles
         public AudioClip closeSound;
 
         private AudioSource audioSource;
-        private NoiseSource noiseSource;
 
         void Start()
         {
@@ -30,25 +29,25 @@ namespace SojaExiles
             audioSource.minDistance = 1f;
             audioSource.maxDistance = 10f;
             audioSource.playOnAwake = false;
-
-            noiseSource = gameObject.GetComponent<NoiseSource>();
-            if (noiseSource == null)
-            {
-                noiseSource = gameObject.AddComponent<NoiseSource>();
-                noiseSource.noiseMakerTag = "Player";
-                noiseSource.noiseRadius = 10f;
-                noiseSource.noiseStrength = 0.6f;
-            }
         }
 
         void OnMouseOver()
         {
             if (Player && Vector3.Distance(Player.position, transform.position) < 2.3f)
             {
-                if (!open && Input.GetMouseButtonDown(0))
-                    StartCoroutine(opening());
-                else if (open && Input.GetMouseButtonDown(0))
-                    StartCoroutine(closing());
+                if (Input.GetMouseButtonDown(0))
+                {
+                    // Increase activity only when the player initiates door interaction
+                    if (PlayerActivityTracker.Instance != null)
+                    {
+                        PlayerActivityTracker.Instance.IncreaseActivity(15f); // You can tweak the amount
+                    }
+
+                    if (!open)
+                        StartCoroutine(opening());
+                    else
+                        StartCoroutine(closing());
+                }
             }
         }
 
@@ -60,8 +59,6 @@ namespace SojaExiles
             openandclose1.Play("Opening 1");
             open = true;
 
-            noiseSource.EmitNoise();
-
             yield return new WaitForSeconds(0.5f);
         }
 
@@ -72,8 +69,6 @@ namespace SojaExiles
 
             openandclose1.Play("Closing 1");
             open = false;
-
-            noiseSource.EmitNoise();
 
             yield return new WaitForSeconds(0.5f);
         }
