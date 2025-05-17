@@ -9,6 +9,10 @@ TagManager:
   - Fuse
   - Tire
   - objectName
+  - Helmate
+  - Engine
+  - GPS
+  - Manual
   layers:
   - Default
   - TransparentFX
