@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
-
+using SojaExiles;
 [RequireComponent(typeof(NavMeshAgent), typeof(Animator))]
 public class WifeAIController : MonoBehaviour
 {
@@ -308,21 +308,33 @@ void HitPlayer()
         lastPos = transform.position;
     }
 
-    void TryOpenDoors()
-    {
-        if (!agent.hasPath || isOpeningDoor) return;
+void TryOpenDoors()
+{
+    if (!agent.hasPath || isOpeningDoor) return;
 
-        Vector3 dir = agent.steeringTarget - transform.position;
-        if (Physics.Raycast(transform.position + Vector3.up, dir.normalized, out RaycastHit hit, 2f))
+    Vector3 dir = agent.steeringTarget - transform.position;
+    if (Physics.Raycast(transform.position + Vector3.up, dir.normalized, out RaycastHit hit, 2f))
+    {
+        if (hit.collider.CompareTag("Door"))
         {
-            if (hit.collider.CompareTag("Door"))
+            // Get your door script of the correct type (opencloseDoor)
+            opencloseDoor doorScript = hit.collider.GetComponent<opencloseDoor>();
+            if (doorScript != null)
             {
-                MonoBehaviour doorScript = hit.collider.GetComponent<MonoBehaviour>();
-                if (doorScript != null && !IsDoorLocked(doorScript) && !IsDoorOpen(doorScript))
+                if (doorScript.isLocked)
+                {
+                    Debug.Log("[WifeAI] Door is locked. Switching patrol point.");
+                    MoveToNextPatrolPoint();  // change patrol point if door locked
+                    return;
+                }
+                else if (!doorScript.open)
+                {
                     StartCoroutine(OpenDoorRoutine(doorScript));
+                }
             }
         }
     }
+}
 
     IEnumerator OpenDoorRoutine(MonoBehaviour doorScript)
     {

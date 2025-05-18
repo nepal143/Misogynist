@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using TMPro;
 
+
 namespace SojaExiles
 {
     public class opencloseDoor : MonoBehaviour
