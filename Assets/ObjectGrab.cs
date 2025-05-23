@@ -12,32 +12,32 @@ public class ObjectGrabber : MonoBehaviour
     private Rigidbody heldRigidbody = null;
     private Collider[] heldColliders = null;
 
-void Update()
-{
-    if (Input.GetMouseButtonDown(0))
+    void Update()
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, grabDistance))
+        if (Input.GetMouseButtonDown(0))
         {
-            GrabbableRoot grabbable = hit.collider.GetComponentInParent<GrabbableRoot>();
-            if (grabbable != null)
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out RaycastHit hit, grabDistance))
             {
-                // Auto-drop if already holding something
-                if (heldObject != null)
+                GrabbableRoot grabbable = hit.collider.GetComponentInParent<GrabbableRoot>();
+                if (grabbable != null)
                 {
-                    DropObject();
-                }
+                    // Auto-drop if already holding something
+                    if (heldObject != null)
+                    {
+                        DropObject();
+                    }
 
-                GrabObject(grabbable.gameObject);
+                    GrabObject(grabbable.gameObject);
+                }
             }
         }
-    }
 
-    if (Input.GetKeyDown(KeyCode.Q) && heldObject != null)
-    {
-        DropObject();
+        if (Input.GetKeyDown(KeyCode.Q) && heldObject != null)
+        {
+            DropObject();
+        }
     }
-}
 
     void GrabObject(GameObject obj)
     {
@@ -45,16 +45,21 @@ void Update()
         heldRigidbody = obj.GetComponent<Rigidbody>();
         heldColliders = obj.GetComponentsInChildren<Collider>();
 
+        // If object was kinematic (frozen), allow it to be picked up by enabling physics temporarily
+        if (heldRigidbody != null && heldRigidbody.isKinematic)
+        {
+            heldRigidbody.isKinematic = false;
+        }
+
         // Disable all colliders
         foreach (var col in heldColliders)
         {
             col.enabled = false;
         }
 
-        // Disable physics
+        // Disable physics while holding
         if (heldRigidbody != null)
         {
-            heldRigidbody.useGravity = false;
             heldRigidbody.isKinematic = true;
         }
 
@@ -78,7 +83,6 @@ void Update()
         // Enable physics
         if (heldRigidbody != null)
         {
-            heldRigidbody.useGravity = true;
             heldRigidbody.isKinematic = false;
         }
 

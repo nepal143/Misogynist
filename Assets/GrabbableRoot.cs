@@ -31,6 +31,13 @@ public class GrabbableRoot : MonoBehaviour
         {
             playerCamera = Camera.main;
         }
+
+        // Make object immovable at start
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+        }
     }
 
     void Update()
