@@ -32,6 +32,9 @@ public class WifeAIController : MonoBehaviour
 public GameObject playerGameObject;  // assign your player GameObject in inspector
 public Camera hitCamera;    
 private bool hasHitPlayer = false;
+[Header("Jump Scare")]
+public AudioClip jumpScareClip;
+private AudioSource jumpScareAudio;
 
     private int currentPatrolIndex = 0;
     private NavMeshAgent agent;
@@ -60,6 +63,8 @@ private bool hasHitPlayer = false;
         agent.speed = movementSpeed;
         agent.stoppingDistance = arrivalThreshold;
 
+        jumpScareAudio = gameObject.AddComponent<AudioSource>();
+jumpScareAudio.spatialBlend = 1f;
         // Assign player by tag at start if not already assigned
         if (player == null)
         {
@@ -246,12 +251,16 @@ private bool hasHitPlayer = false;
 
 void HitPlayer()
 {
-    FindObjectOfType<DayController>().PlayerCaught();
     if (hasHitPlayer) return; // prevent double hitting
-
+ FindObjectOfType<DayController>().PlayerCaught();
     Debug.Log("[WifeAI] Hit Player!");
 
     hasHitPlayer = true;
+
+    if (jumpScareClip != null && jumpScareAudio != null)
+    {
+        jumpScareAudio.PlayOneShot(jumpScareClip);
+    }
 
     if (playerGameObject != null)
         playerGameObject.SetActive(false);
@@ -265,6 +274,7 @@ void HitPlayer()
     if (agent != null)
         agent.isStopped = true;
 }
+
 
     void HandleFootsteps()
     {
@@ -396,7 +406,7 @@ void TryOpenDoors()
 
         investigateTarget = position;
         investigateTimer = 4f;
-        currentState = AIState.Investigating;  
+        currentState = AIState.Investigating;   
         Debug.Log("[WifeAI] Investigating noise at " + position);
     }
 }
