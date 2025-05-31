@@ -97,8 +97,10 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 0}
-  m_LightingSettings: {fileID: 0}
+  m_LightingDataAsset: {fileID: 112000000, guid: 23648d9289e21d447bd56754c99cb225,
+    type: 2}
+  m_LightingSettings: {fileID: 4890085278179872738, guid: 3525452d346b6e24f934e74a7fc81c58,
+    type: 2}
 --- !u!196 &4
 NavMeshSettings:
   serializedVersion: 2
@@ -14168,6 +14170,50 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 534512615}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &229244089
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 229244091}
+  - component: {fileID: 229244090}
+  m_Layer: 0
+  m_Name: cursorlock
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &229244090
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 229244089}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17ad7095faaf09e4d9b5aa08674de036, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &229244091
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 229244089}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.7636652, y: 1.1744887, z: -3.4794858}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &229617311
 GameObject:
   m_ObjectHideFlags: 0
@@ -99529,9 +99575,9 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 1ed68493c63457a4ead039df9379ce90, type: 3}
+  m_audioClip: {fileID: 8300000, guid: 608dd96655ad1a64c93bf1167361caba, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.155
+  m_Volume: 1
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -127012,3 +127058,4 @@ SceneRoots:
   - {fileID: 733615219}
   - {fileID: 865485387}
   - {fileID: 1688449488}
+  - {fileID: 229244091}

@@ -2,7 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Playables;
 using TMPro;
-
+using UnityEngine.SceneManagement;
 public class DayController : MonoBehaviour
 {
     public int currentDay = 1;
@@ -112,9 +112,19 @@ public class DayController : MonoBehaviour
         // Add win screen or end-game logic here
     }
 
-    void GameOver()
+void GameOver()
+{
+    Debug.Log("💀 Game Over. Player failed to escape.");
+
+    int currentIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
+
+    if (currentIndex > 0)
     {
-        Debug.Log("💀 Game Over. Player failed to escape.");
-        // Implement game over logic (load scene, show screen, etc.)
+        UnityEngine.SceneManagement.SceneManager.LoadScene(currentIndex - 1);
     }
+    else
+    {
+        Debug.LogWarning("Already at the first scene. Cannot go back.");
+    }
+}
 }
