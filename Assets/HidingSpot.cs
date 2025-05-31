@@ -3,8 +3,8 @@ using UnityEngine;
 public class HidingSpot : MonoBehaviour
 {
     [Header("References")]
-    public GameObject hidingCameraObject;      // The object containing the camera + listener
-    public GameObject pressFToHideCanvas;      // Canvas GameObject to enable when near
+    public GameObject hidingCameraObject;
+    public GameObject pressFToHideCanvas; // This is now unique per hiding spot
 
     [Header("Settings")]
     public float hideDistance = 2f;
@@ -23,16 +23,12 @@ public class HidingSpot : MonoBehaviour
             playerObject = playerGO;
             player = playerGO.transform;
         }
-        else
-        {
-            Debug.LogError("Player not found! Make sure it has the tag 'Player'.");
-        }
 
         if (hidingCameraObject != null)
             hidingCameraObject.SetActive(false);
 
         if (pressFToHideCanvas != null)
-            pressFToHideCanvas.SetActive(false);  // Hide canvas at start
+            pressFToHideCanvas.SetActive(false); // Make sure it's hidden at start
     }
 
     void Update()
@@ -40,34 +36,24 @@ public class HidingSpot : MonoBehaviour
         if (player == null) return;
 
         float distance = Vector3.Distance(player.position, transform.position);
-        bool canHide = isHovering && distance <= hideDistance;
+        bool canHide = isHovering && distance <= hideDistance && !isHiding;
 
-        // Show/hide the 'Press F to Hide' canvas
+        // Show/hide panel
         if (pressFToHideCanvas != null)
-            pressFToHideCanvas.SetActive(canHide && !isHiding);
+            pressFToHideCanvas.SetActive(canHide);
 
+        // Handle input
         if (Input.GetKeyDown(KeyCode.F))
         {
             if (isHiding)
-            {
                 ExitHiding();
-            }
             else if (canHide)
-            {
                 EnterHiding();
-            }
         }
     }
 
-    void OnMouseOver()
-    {
-        isHovering = true;
-    }
-
-    void OnMouseExit()
-    {
-        isHovering = false;
-    }
+    void OnMouseOver() => isHovering = true;
+    void OnMouseExit() => isHovering = false;
 
     void EnterHiding()
     {
@@ -78,10 +64,9 @@ public class HidingSpot : MonoBehaviour
             hidingCameraObject.SetActive(true);
 
         if (pressFToHideCanvas != null)
-            pressFToHideCanvas.SetActive(false); // Hide UI when hiding
+            pressFToHideCanvas.SetActive(false);
 
         isHiding = true;
-        Debug.Log("Player is now hiding.");
     }
 
     void ExitHiding()
@@ -93,6 +78,5 @@ public class HidingSpot : MonoBehaviour
             hidingCameraObject.SetActive(false);
 
         isHiding = false;
-        Debug.Log("Player exited hiding.");
     }
 }
