@@ -58,6 +58,12 @@ public class FirstPersonController : MonoBehaviour
     public bool playerCanMove = true;
     public float walkSpeed = 5f;
     public float maxVelocityChange = 10f;
+    [Header("Footstep Settings")]
+public AudioSource footstepSource;
+public AudioClip[] footstepClips;
+public float footstepInterval = 0.5f;
+
+private float footstepTimer = 0f;
 
     // Internal Variables
     private bool isWalking = false;
@@ -90,6 +96,7 @@ public class FirstPersonController : MonoBehaviour
     private bool isSprintCooldown = false;
     private float sprintCooldownReset;
 
+    
     #endregion
 
     #region Jump
@@ -363,80 +370,90 @@ public class FirstPersonController : MonoBehaviour
             HeadBob();
         }
     }
+void PlayFootstep()
+{
+    if (footstepClips.Length == 0 || footstepSource == null)
+        return;
 
+    AudioClip clip = footstepClips[Random.Range(0, footstepClips.Length)];
+    footstepSource.PlayOneShot(clip);
+}
     void FixedUpdate()
     {
         #region Movement
 
-        if (playerCanMove)
+if (playerCanMove)
+{
+    Vector3 targetVelocity = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
+
+    // Is walking check
+    if ((targetVelocity.x != 0 || targetVelocity.z != 0) && isGrounded)
+    {
+        isWalking = true;
+    }
+    else
+    {
+        isWalking = false;
+    }
+
+    // Movement with sprint
+    if (enableSprint && Input.GetKey(sprintKey) && sprintRemaining > 0f && !isSprintCooldown)
+    {
+        targetVelocity = transform.TransformDirection(targetVelocity) * sprintSpeed;
+
+        Vector3 velocity = rb.velocity;
+        Vector3 velocityChange = (targetVelocity - velocity);
+        velocityChange.x = Mathf.Clamp(velocityChange.x, -maxVelocityChange, maxVelocityChange);
+        velocityChange.z = Mathf.Clamp(velocityChange.z, -maxVelocityChange, maxVelocityChange);
+        velocityChange.y = 0;
+
+        if (velocityChange.x != 0 || velocityChange.z != 0)
         {
-            // Calculate how fast we should be moving
-            Vector3 targetVelocity = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
+            isSprinting = true;
 
-            // Checks if player is walking and isGrounded
-            // Will allow head bob
-            if (targetVelocity.x != 0 || targetVelocity.z != 0 && isGrounded)
-            {
-                isWalking = true;
-            }
-            else
-            {
-                isWalking = false;
-            }
+            if (isCrouched)
+                Crouch();
 
-            // All movement calculations shile sprint is active
-            if (enableSprint && Input.GetKey(sprintKey) && sprintRemaining > 0f && !isSprintCooldown)
-            {
-                targetVelocity = transform.TransformDirection(targetVelocity) * sprintSpeed;
-
-                // Apply a force that attempts to reach our target velocity
-                Vector3 velocity = rb.velocity;
-                Vector3 velocityChange = (targetVelocity - velocity);
-                velocityChange.x = Mathf.Clamp(velocityChange.x, -maxVelocityChange, maxVelocityChange);
-                velocityChange.z = Mathf.Clamp(velocityChange.z, -maxVelocityChange, maxVelocityChange);
-                velocityChange.y = 0;
-
-                // Player is only moving when valocity change != 0
-                // Makes sure fov change only happens during movement
-                if (velocityChange.x != 0 || velocityChange.z != 0)
-                {
-                    isSprinting = true;
-
-                    if (isCrouched)
-                    {
-                        Crouch();
-                    }
-
-                    if (hideBarWhenFull && !unlimitedSprint)
-                    {
-                        sprintBarCG.alpha += 5 * Time.deltaTime;
-                    }
-                }
-
-                rb.AddForce(velocityChange, ForceMode.VelocityChange);
-            }
-            // All movement calculations while walking
-            else
-            {
-                isSprinting = false;
-
-                if (hideBarWhenFull && sprintRemaining == sprintDuration)
-                {
-                    sprintBarCG.alpha -= 3 * Time.deltaTime;
-                }
-
-                targetVelocity = transform.TransformDirection(targetVelocity) * walkSpeed;
-
-                // Apply a force that attempts to reach our target velocity
-                Vector3 velocity = rb.velocity;
-                Vector3 velocityChange = (targetVelocity - velocity);
-                velocityChange.x = Mathf.Clamp(velocityChange.x, -maxVelocityChange, maxVelocityChange);
-                velocityChange.z = Mathf.Clamp(velocityChange.z, -maxVelocityChange, maxVelocityChange);
-                velocityChange.y = 0;
-
-                rb.AddForce(velocityChange, ForceMode.VelocityChange);
-            }
+            if (hideBarWhenFull && !unlimitedSprint)
+                sprintBarCG.alpha += 5 * Time.deltaTime;
         }
+
+        rb.AddForce(velocityChange, ForceMode.VelocityChange);
+    }
+    else
+    {
+        isSprinting = false;
+
+        if (hideBarWhenFull && sprintRemaining == sprintDuration)
+            sprintBarCG.alpha -= 3 * Time.deltaTime;
+
+        targetVelocity = transform.TransformDirection(targetVelocity) * walkSpeed;
+
+        Vector3 velocity = rb.velocity;
+        Vector3 velocityChange = (targetVelocity - velocity);
+        velocityChange.x = Mathf.Clamp(velocityChange.x, -maxVelocityChange, maxVelocityChange);
+        velocityChange.z = Mathf.Clamp(velocityChange.z, -maxVelocityChange, maxVelocityChange);
+        velocityChange.y = 0;
+
+        rb.AddForce(velocityChange, ForceMode.VelocityChange);
+    }
+
+    // === Footstep Sound Logic ===
+    if ((isWalking || isSprinting) && isGrounded)
+    {
+        footstepTimer -= Time.deltaTime;
+
+        if (footstepTimer <= 0f)
+        {
+            PlayFootstep();
+            footstepTimer = footstepInterval;
+        }
+    }
+    else
+    {
+        footstepTimer = 0f;
+    }
+}
 
         #endregion
     }
