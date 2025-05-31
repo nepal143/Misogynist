@@ -1832,7 +1832,7 @@ GameObject:
   - component: {fileID: 4678935565826529465}
   m_Layer: 0
   m_Name: GPS
-  m_TagString: Untagged
+  m_TagString: GPS
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1872,8 +1872,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.16141364, y: 0.07791771, z: 0.029143572}
-  m_Center: {x: -0.030706817, y: 0.030544521, z: 0.033827852}
+  m_Size: {x: 0.16141364, y: 0.07791771, z: 0.060266078}
+  m_Center: {x: -0.030706817, y: 0.030544521, z: 0.01826661}
 --- !u!54 &5314414193825308671
 Rigidbody:
   m_ObjectHideFlags: 0

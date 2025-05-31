@@ -3,14 +3,14 @@ using UnityEngine;
 public class HidingSpot : MonoBehaviour
 {
     [Header("References")]
-    public GameObject hidingCameraObject;  // Parent object with Camera + AudioListener
+    public GameObject hidingCameraObject;      // The object containing the camera + listener
+    public GameObject pressFToHideCanvas;      // Canvas GameObject to enable when near
 
     [Header("Settings")]
     public float hideDistance = 2f;
 
     private Transform player;
     private GameObject playerObject;
-    private Camera hidingCamera;
 
     private bool isHovering = false;
     private bool isHiding = false;
@@ -29,25 +29,10 @@ public class HidingSpot : MonoBehaviour
         }
 
         if (hidingCameraObject != null)
-        {
-            hidingCamera = hidingCameraObject.GetComponent<Camera>();
+            hidingCameraObject.SetActive(false);
 
-            if (hidingCamera != null)
-            {
-                hidingCamera.enabled = false;
-            }
-            else
-            {
-                Debug.LogWarning("No Camera component found on hidingCameraObject.");
-            }
-
-            // Also disable AudioListener if needed
-            AudioListener listener = hidingCameraObject.GetComponent<AudioListener>();
-            if (listener != null)
-            {
-                listener.enabled = false;
-            }
-        }
+        if (pressFToHideCanvas != null)
+            pressFToHideCanvas.SetActive(false);  // Hide canvas at start
     }
 
     void Update()
@@ -55,6 +40,11 @@ public class HidingSpot : MonoBehaviour
         if (player == null) return;
 
         float distance = Vector3.Distance(player.position, transform.position);
+        bool canHide = isHovering && distance <= hideDistance;
+
+        // Show/hide the 'Press F to Hide' canvas
+        if (pressFToHideCanvas != null)
+            pressFToHideCanvas.SetActive(canHide && !isHiding);
 
         if (Input.GetKeyDown(KeyCode.F))
         {
@@ -62,7 +52,7 @@ public class HidingSpot : MonoBehaviour
             {
                 ExitHiding();
             }
-            else if (isHovering && distance <= hideDistance)
+            else if (canHide)
             {
                 EnterHiding();
             }
@@ -84,12 +74,11 @@ public class HidingSpot : MonoBehaviour
         if (playerObject != null)
             playerObject.SetActive(false);
 
-        if (hidingCamera != null)
-            hidingCamera.enabled = true;
+        if (hidingCameraObject != null)
+            hidingCameraObject.SetActive(true);
 
-        AudioListener listener = hidingCameraObject.GetComponent<AudioListener>();
-        if (listener != null)
-            listener.enabled = true;
+        if (pressFToHideCanvas != null)
+            pressFToHideCanvas.SetActive(false); // Hide UI when hiding
 
         isHiding = true;
         Debug.Log("Player is now hiding.");
@@ -100,12 +89,8 @@ public class HidingSpot : MonoBehaviour
         if (playerObject != null)
             playerObject.SetActive(true);
 
-        if (hidingCamera != null)
-            hidingCamera.enabled = false;
-
-        AudioListener listener = hidingCameraObject.GetComponent<AudioListener>();
-        if (listener != null)
-            listener.enabled = false;
+        if (hidingCameraObject != null)
+            hidingCameraObject.SetActive(false);
 
         isHiding = false;
         Debug.Log("Player exited hiding.");
