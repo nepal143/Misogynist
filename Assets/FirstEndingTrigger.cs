@@ -1,38 +1,48 @@
 using UnityEngine;
+using TMPro;
+using System.Collections;
 
 public class FirstEndingTrigger : MonoBehaviour
 {
-    public GameObject playerHand; // The hand or inventory where the key would be held
-    public string requiredItemName = "CarKey"; // The name of the key object
-    public CarTireInstaller tireInstaller; // Reference to tire installer script
-    public LeverControl leverControl; // Reference to lever control script
-    public GameObject endingTimelineObject; // Object that triggers the timeline
+    public GameObject playerHand;
+    public string requiredItemName = "CarKey";
+    public CarTireInstaller tireInstaller;
+    public LeverControl leverControl;
+    public GameObject endingTimelineObject;
+    public TextMeshProUGUI infoText; // Assign in inspector
+
+    private Coroutine hideTextCoroutine;
 
     private void OnMouseDown()
     {
-        // 1. Check if player has the car key in hand
+        string missingItems = "";
+
         if (!IsHoldingRequiredItem())
-        {
-            Debug.Log("Player doesn't have the car key.");
-            return;
-        }
+            missingItems += "• Car Key is missing.\n";
 
-        // 2. Check if all tires are installed
         if (!tireInstaller.AreAllTiresInstalled())
-        {
-            Debug.Log("All tires are not installed.");
-            return;
-        }
+            missingItems += "• All car tires are not installed.\n";
 
-        // 3. Check if the lever has been pulled
         if (!leverControl.IsLeverPulled())
+            missingItems += "• Lever has not been pulled.\n";
+
+        if (!string.IsNullOrEmpty(missingItems))
         {
-            Debug.Log("Lever has not been pulled.");
+            infoText.text = "<b>You can't escape yet:</b>\n" + missingItems;
+            infoText.gameObject.SetActive(true);
+
+            // Restart coroutine to hide after 3 seconds
+            if (hideTextCoroutine != null)
+                StopCoroutine(hideTextCoroutine);
+
+            hideTextCoroutine = StartCoroutine(HideInfoTextAfterDelay(3f));
             return;
         }
 
-        // ✅ All conditions met - trigger the ending
-        Debug.Log("All conditions met! Triggering the first ending...");
+        // All conditions met
+        infoText.text = "";
+        infoText.gameObject.SetActive(false);
+        Debug.Log("✅ All conditions met! Triggering the first ending...");
         endingTimelineObject.SetActive(true);
     }
 
@@ -43,5 +53,12 @@ public class FirstEndingTrigger : MonoBehaviour
 
         GameObject heldItem = playerHand.transform.GetChild(0).gameObject;
         return heldItem.name.Contains(requiredItemName);
+    }
+
+    IEnumerator HideInfoTextAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        infoText.gameObject.SetActive(false);
+        hideTextCoroutine = null;
     }
 }

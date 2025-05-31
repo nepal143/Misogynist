@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using TMPro;
 
 public class LeverControl : MonoBehaviour
 {
@@ -12,8 +13,11 @@ public class LeverControl : MonoBehaviour
     public float leverRotateTime = 1.0f;   // Time to rotate lever
     public float garageMoveTime = 2.0f;    // Time to open garage
 
-    private bool leverPulled = false ; 
+    public TextMeshProUGUI infoText;       // Assign in Inspector for messages
+
+    private bool leverPulled = false; 
     private bool isInteracting = false;
+    private Coroutine hideTextCoroutine;
 
     void OnMouseDown()
     {
@@ -34,11 +38,26 @@ public class LeverControl : MonoBehaviour
 
             yield return new WaitForSeconds(0.5f); // Optional delay
             yield return StartCoroutine(MoveGarageDoor(garageStart.position, garageEnd.position));
-            leverPulled =true; 
+            leverPulled = true;
+
+            // Clear any message
+            if (infoText != null)
+                infoText.gameObject.SetActive(false);
         }
         else
         {
-            // ❌ LIGHTS OFF – Fake pull
+            // ❌ LIGHTS OFF – Show message and fake pull
+            if (infoText != null)
+            {
+                infoText.text = "⚠️ No electricity! Please install all fuses on the fuse board.";
+                infoText.gameObject.SetActive(true);
+
+                if (hideTextCoroutine != null)
+                    StopCoroutine(hideTextCoroutine);
+
+                hideTextCoroutine = StartCoroutine(HideInfoTextAfterDelay(3f));
+            }
+
             yield return StartCoroutine(RotateLever(0, 163));
             yield return new WaitForSeconds(0.2f);
             yield return StartCoroutine(RotateLever(163, 0));
@@ -76,8 +95,17 @@ public class LeverControl : MonoBehaviour
 
         garageDoor.position = to;
     }
+
     public bool IsLeverPulled()
-{
-    return leverPulled; // assume this bool becomes true when lever is pulled
-}
+    {
+        return leverPulled;
+    }
+
+    IEnumerator HideInfoTextAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (infoText != null)
+            infoText.gameObject.SetActive(false);
+        hideTextCoroutine = null;
+    }
 }

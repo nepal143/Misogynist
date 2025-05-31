@@ -1,4 +1,6 @@
 using UnityEngine;
+using TMPro;
+using System.Collections;
 
 public class SecondEndingTrigger : MonoBehaviour
 {
@@ -11,11 +13,14 @@ public class SecondEndingTrigger : MonoBehaviour
     public GameObject manualTempObject;
 
     public GameObject timelineTriggerObject;
+    public TextMeshProUGUI infoText; // Assign in Inspector
 
     private bool engineSubmitted = false;
     private bool helmateSubmitted = false;
     private bool gpsSubmitted = false;
     private bool manualSubmitted = false;
+
+    private Coroutine hideTextCoroutine;
 
     private void OnMouseDown()
     {
@@ -24,11 +29,18 @@ public class SecondEndingTrigger : MonoBehaviour
 
         if (engineSubmitted && helmateSubmitted && gpsSubmitted && manualSubmitted)
         {
+            infoText.text = "";
+            infoText.gameObject.SetActive(false);
+
             if (timelineTriggerObject != null)
             {
                 timelineTriggerObject.SetActive(true);
-                Debug.Log("All items submitted. Timeline triggered.");
+                Debug.Log("✅ All items submitted. Timeline triggered.");
             }
+        }
+        else
+        {
+            ShowMissingItems();
         }
     }
 
@@ -47,7 +59,6 @@ public class SecondEndingTrigger : MonoBehaviour
                     EnableTempObject(engineTempObject);
                     Destroy(heldItem.gameObject);
                     engineSubmitted = true;
-                    Debug.Log("Engine submitted.");
                 }
                 break;
 
@@ -57,7 +68,6 @@ public class SecondEndingTrigger : MonoBehaviour
                     EnableTempObject(helmateTempObject);
                     Destroy(heldItem.gameObject);
                     helmateSubmitted = true;
-                    Debug.Log("Helmate submitted.");
                 }
                 break;
 
@@ -67,7 +77,6 @@ public class SecondEndingTrigger : MonoBehaviour
                     EnableTempObject(gpsTempObject);
                     Destroy(heldItem.gameObject);
                     gpsSubmitted = true;
-                    Debug.Log("GPS submitted.");
                 }
                 break;
 
@@ -77,10 +86,35 @@ public class SecondEndingTrigger : MonoBehaviour
                     EnableTempObject(manualTempObject);
                     Destroy(heldItem.gameObject);
                     manualSubmitted = true;
-                    Debug.Log("Manual submitted.");
                 }
                 break;
         }
+    }
+
+    void ShowMissingItems()
+    {
+        string message = "<b>Still missing:</b>\n";
+
+        if (!engineSubmitted) message += "• Engine\n";
+        if (!helmateSubmitted) message += "• Helmate\n";
+        if (!gpsSubmitted) message += "• GPS\n";
+        if (!manualSubmitted) message += "• Manual\n";
+
+        infoText.text = message;
+        infoText.gameObject.SetActive(true);
+
+        // Start or restart coroutine to hide text after 3 seconds
+        if (hideTextCoroutine != null)
+            StopCoroutine(hideTextCoroutine);
+
+        hideTextCoroutine = StartCoroutine(HideInfoTextAfterDelay(3f));
+    }
+
+    IEnumerator HideInfoTextAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        infoText.gameObject.SetActive(false);
+        hideTextCoroutine = null;
     }
 
     void EnableTempObject(GameObject tempObject)
